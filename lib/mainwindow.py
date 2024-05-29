@@ -1,6 +1,3 @@
-import multiprocessing
-multiprocessing.freeze_support()
-
 from tkinter import *
 import pyautogui
 import time
@@ -11,6 +8,7 @@ from   lib.detect import Process
 from lib.train import TrainProcess
 import shutil
 from PIL import ImageTk
+import multiprocessing
 
 
 modelName = "init"
@@ -167,11 +165,10 @@ class MainWindow(object):
         
         self.root.withdraw()
         
-        if(hasattr(self,'subtle')==False):
-            self.subtle = Toplevel(self.root)
-    
-        self.subtle.title('Short cut panel')
-        self.subtle.geometry("150x250")
+        if hasattr(self,'subtle')==False:
+            self.subtle = Toplevel(self.root)  
+            self.subtle.title('Short cut panel')
+            self.subtle.geometry("150x250")
         
         self.subtle.attributes("-topmost", True)
         
@@ -201,14 +198,12 @@ class MainWindow(object):
         
         # Create backto Button
         if self.continue_subtle == 0:
-            self.withdraw_btn = Button(self.subtle, text="隱藏快捷鍵", command=self.subtle_withdraw)
-            self.withdraw_btn.grid(row=cnt, column=0, pady=2, ipadx=10)
 
             self.delete_btn = Button(self.subtle, text="停止偵測", command=self.subtle_backto)
-            self.delete_btn.grid(row=cnt+1, column=0, pady=2, ipadx=10)
+            self.delete_btn.grid(row=cnt, column=0, pady=2, ipadx=10)
 
             self.subtle.grid_columnconfigure((0), weight=1)
-            for i in range(0,cnt+2):
+            for i in range(0,cnt+1):
                 self.subtle.grid_rowconfigure(i, weight=1)
         else:
             self.subtle.grid_columnconfigure((0), weight=1)
@@ -220,19 +215,9 @@ class MainWindow(object):
 
 
 
-
-    def subtle_withdraw(self):
-        self.subtle.withdraw()
-
-
-
-
     
     def subtle_backto(self):
         self.stop()
-        self.continue_subtle = 0
-        self.subtle.withdraw()
-        self.root.deiconify()
 
 
 
@@ -263,7 +248,8 @@ class MainWindow(object):
 
 
     def restore_backto(self):
-        self.restore.withdraw()
+        self.restore.destroy()
+        delattr(self, 'restore')
         self.root.deiconify()
         self.show()
 
@@ -274,11 +260,10 @@ class MainWindow(object):
     def show_restore(self):
         self.root.withdraw()
         
-        if(hasattr(self,'restore')==False):
-            self.restore = Toplevel(self.root)
-    
-        self.restore.title('Restore panel')
-        self.restore.geometry("150x150")
+        if hasattr(self,'restore')==False :
+            self.restore = Toplevel(self.root) 
+            self.restore.title('Restore panel')
+            self.restore.geometry("150x150")
         
         self.restore.geometry('+{}+{}'.format(int(self.width/2-100),int(self.height/2-100)))
         self.restore.attributes('-alpha',0.8)
@@ -411,7 +396,7 @@ class MainWindow(object):
 
         self.editor.withdraw()
 
-        if(hasattr(self,'creator')==True):           
+        if hasattr(self,'creator')==True:           
             self.creator.destroy()
             delattr(self, "creator")
 
@@ -620,9 +605,17 @@ class MainWindow(object):
 
 
     def stop(self):
+        self.continue_subtle = 0
         if not self.process:
-            return
-        self.process.stop()
+            pass
+        else:
+            self.process.stop()
+        if hasattr(self,'subtle')==True:
+            self.subtle.destroy()
+            delattr(self, "subtle")
+        self.root.deiconify()
+        # self.show()   
+
 
 
 

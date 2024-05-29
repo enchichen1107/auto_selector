@@ -1,10 +1,7 @@
 import multiprocessing
-multiprocessing.freeze_support()
-
 import cv2 as cv
 import numpy as np
 import ctypes
-import multiprocessing
 import time
 from tensorflow.keras.models import load_model
 import mediapipe as mp
