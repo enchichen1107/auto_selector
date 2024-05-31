@@ -199,11 +199,15 @@ class MainWindow(object):
         # Create backto Button
         if self.continue_subtle == 0:
 
-            self.delete_btn = Button(self.subtle, text="停止偵測", command=self.subtle_backto)
-            self.delete_btn.grid(row=cnt, column=0, pady=2, ipadx=10)
+            self.hide_btn = Button(self.subtle, fg="#1152f7", text="隱藏面板", command=self.subtle_hide)
+            self.hide_btn.grid(row=cnt, column=0, pady=2, ipadx=10)
+
+            self.delete_btn = Button(self.subtle, fg="#1152f7", text="停止偵測", command=self.subtle_backto)
+            self.delete_btn.grid(row=cnt+1, column=0, pady=2, ipadx=10)
+
 
             self.subtle.grid_columnconfigure((0), weight=1)
-            for i in range(0,cnt+1):
+            for i in range(0,cnt+2):
                 self.subtle.grid_rowconfigure(i, weight=1)
         else:
             self.subtle.grid_columnconfigure((0), weight=1)
@@ -219,6 +223,12 @@ class MainWindow(object):
     def subtle_backto(self):
         self.stop()
 
+
+
+
+    def subtle_hide(self):
+        if hasattr(self, 'subtle'):
+            self.subtle.withdraw()
 
 
 
@@ -318,7 +328,7 @@ class MainWindow(object):
         self.root.withdraw()
         
         
-        if(hasattr(self,'editor')==False):
+        if hasattr(self,'editor')==False:
             self.editor = Toplevel(self.root)
             self.editor.title('Update A Setting')
             self.editor.geometry("270x350")
@@ -383,7 +393,9 @@ class MainWindow(object):
 
     
     def backto(self):
-        self.editor.withdraw()
+        self.editor.destroy()
+        delattr(self, "editor")
+        # self.editor.withdraw()
         self.root.deiconify()
         self.show()     
         
@@ -456,9 +468,11 @@ class MainWindow(object):
         
     def create_window_delete(self):
    
-        self.creator.destroy()
-        delattr(self, "creator")
-        delattr(self, "dialogue_text")
+        if hasattr(self,'creator'):
+            self.creator.destroy()
+            delattr(self, "creator")
+        if hasattr(self,'dialogue_text'):
+            delattr(self, "dialogue_text")
         self.editor.deiconify()
         self.edit()
         

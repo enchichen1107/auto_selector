@@ -239,7 +239,7 @@ class TrainWorker(object):
             font = ImageFont.truetype(fontpath, 35)      
             imgPil = Image.fromarray(frame)                
             draw = ImageDraw.Draw(imgPil)                
-            draw.text((10, 10), "接下來會進行30回合收資料\n每回合都需點擊畫面中的圓點\n藍點請保持一般表情、紅點請做微表情\n準備好請點擊畫面", fill=(0, 0, 0), font=font)
+            draw.text((10, 10), "接下來會進行30回合收資料\n每回合都需點擊畫面中的圓點\n藍點請保持一般表情、紅點請做微表情\n準備好請點擊畫面", fill=(219, 12, 242), font=font)
             frame = np.array(imgPil)      
             cv.imshow("subtle facial", frame)
             if self.response1:
@@ -280,7 +280,7 @@ class TrainWorker(object):
                     font = ImageFont.truetype(fontpath, 35)      
                     imgPil = Image.fromarray(frame)                
                     draw = ImageDraw.Draw(imgPil)                
-                    draw.text((10, 10), "請確認欲使用的微表情是否能被系統正確框出\n若無法 請將光源調亮\n準備好請點擊畫面", fill=(0, 0, 0), font=font)
+                    draw.text((10, 10), "請確認欲使用的微表情是否能被系統正確框出\n若無法 請將光源調亮\n準備好請點擊畫面", fill=(219, 12, 242), font=font)
                     frame = np.array(imgPil)      
                     cv.imshow("subtle facial", frame)
                     if self.response2:
@@ -362,7 +362,7 @@ class TrainWorker(object):
                         font = ImageFont.truetype(fontpath, 35)      
                         imgPil = Image.fromarray(frame)                
                         draw = ImageDraw.Draw(imgPil)                
-                        draw.text((mid_pt[pt_pos][0]+40,mid_pt[pt_pos][1]-30), "請保持一般表情\n點擊圓點", fill=(0, 0, 0), font=font)
+                        draw.text((mid_pt[pt_pos][0]+40,mid_pt[pt_pos][1]-30), "請保持一般表情\n點擊圓點", fill=(255, 0, 0), font=font)
                         frame = np.array(imgPil)
                         cv.circle(frame, (mid_pt[pt_pos][0],mid_pt[pt_pos][1]), 30, (255,0,0), -1)
 
@@ -421,7 +421,7 @@ class TrainWorker(object):
                         font = ImageFont.truetype(fontpath, 35)      
                         imgPil = Image.fromarray(frame)                
                         draw = ImageDraw.Draw(imgPil)                
-                        draw.text((mid_pt[pt_pos][0]+40,mid_pt[pt_pos][1]-30), "請作微表情\n點擊圓點", fill=(0, 0, 0), font=font)
+                        draw.text((mid_pt[pt_pos][0]+40,mid_pt[pt_pos][1]-30), "請作微表情\n點擊圓點", fill=(0, 0, 255), font=font)
                         frame = np.array(imgPil)
 
 
@@ -445,7 +445,7 @@ class TrainWorker(object):
             font = ImageFont.truetype(fontpath, 35)      
             imgPil = Image.fromarray(frame)                
             draw = ImageDraw.Draw(imgPil)                
-            draw.text((10, 10), "結束收資料流程，接下來將進行分析\n約需等待三分鐘，請點擊畫面開始分析", fill=(0, 0, 0), font=font)
+            draw.text((10, 10), "結束收資料流程，接下來將進行分析\n約需等待三分鐘，請點擊畫面開始分析", fill=(219, 12, 242), font=font)
             frame = np.array(imgPil)
             cv.imshow("subtle facial", frame)
             if self.response1:
@@ -821,7 +821,7 @@ class TrainWorker(object):
             font = ImageFont.truetype(fontpath, 35)      
             imgPil = Image.fromarray(frame)                
             draw = ImageDraw.Draw(imgPil)                
-            draw.text((10, 10), "結束分析\n請點擊畫面離開", fill=(0, 0, 0), font=font)
+            draw.text((10, 10), "結束分析\n請點擊畫面離開", fill=(219, 12, 242), font=font)
             frame = np.array(imgPil)
             cv.imshow("subtle facial", frame)
             if self.response2:
