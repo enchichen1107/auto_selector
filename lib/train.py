@@ -113,8 +113,8 @@ class TrainWorker(object):
         self.pos = []
         self.sz = []
         if self.facePart=="brow":
-            self.pos = [54, 353]
-            self.sz = [96,24]
+            self.pos = [54, 345]
+            self.sz = [96,48]
         elif self.facePart=="nose":
             self.pos = [119,426]
             self.sz = [60,26]
@@ -199,6 +199,7 @@ class TrainWorker(object):
             conn.commit()
             
             c.execute("UPDATE domains SET counts = ? WHERE id = ?", (new_counts,1))
+            print(new_counts)
             conn.commit()
             conn.close()
             
@@ -310,6 +311,7 @@ class TrainWorker(object):
         ctrl_cnt = 0
         exp_cnt = 0
         show_green = 0
+        round = 0
 
         with mp_face_mesh.FaceMesh(
                 max_num_faces=1,
@@ -334,9 +336,16 @@ class TrainWorker(object):
                     
                     cv.circle(frame, tuple((mesh_points[self.pos[0]][0]-5,mesh_points[self.pos[0]][1]-5)), radius=5, color=(0, 0, 255), thickness=-1)
                     cv.circle(frame, tuple((mesh_points[self.pos[1]][0]+5,mesh_points[self.pos[1]][1]+5)), radius=5, color=(0, 0, 255), thickness=-1)
+
+                    cv.putText(frame, "Round "+str(round)+" / 30", (100,100), cv.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 2, cv.LINE_AA)
+                    
                     
                     cropped_img = frame[mesh_points[self.pos[0]][1]:mesh_points[self.pos[1]][1],mesh_points[self.pos[0]][0]:mesh_points[self.pos[1]][0]].copy()
-                    cropped_img = cv.resize(cropped_img,(self.sz[0],self.sz[1]))
+
+                    try:
+                        cropped_img = cv.resize(cropped_img,(self.sz[0],self.sz[1]))
+                    except Exception as e:
+                        continue
                     
 
                     self.mouseX = mid_pt[pt_pos][0]
@@ -369,6 +378,9 @@ class TrainWorker(object):
                     key = cv.waitKey(1) & 0xFF
                     if key == ord('q'):
                         sys.exit(0)
+
+                    if self.rest==1:
+                        round+=1
 
                     if self.rest==1 or self.rest==5 or self.rest==9:
                         exp_cnt+=1               

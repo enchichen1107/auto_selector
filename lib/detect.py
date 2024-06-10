@@ -65,8 +65,8 @@ class Worker(object):
         self.pos = []
         self.sz = []
         if self.facePart=="brow":
-            self.pos = [54, 353]
-            self.sz = [96,24]
+            self.pos = [54, 345]
+            self.sz = [96,48]
         elif self.facePart=="nose":
             self.pos = [119,426]
             self.sz = [60,26]
@@ -81,49 +81,53 @@ class Worker(object):
                 min_detection_confidence=0.5) as face_mesh:
 
             prediction = 0
-            frame_rate = 10
-            prev_time = 0
+            # frame_rate = 10
+            # prev_time = 0
             success_cnt = 0
             while True:
                 prediction = 0
-                time_elapsed = time.time() - prev_time
+                # time_elapsed = time.time() - prev_time
                 ret, frame = cap.read()
                 frame = cv.flip(frame, 1)
                 if not ret:
                     break
                 if not self.is_alive:
                     break
-                if time_elapsed > 1./frame_rate:
-                    prev_time = time.time()
-                    rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-                    img_h, img_w = frame.shape[:2]
-                    results = face_mesh.process(rgb_frame)
-                    if not results.multi_face_landmarks:
-                        continue
-                    else:
-                        
-                        mesh_points = np.array([np.multiply([p.x, p.y], [img_w, img_h]).astype(int) for p in results.multi_face_landmarks[0].landmark])
+                # if time_elapsed > 1./frame_rate:
+                # prev_time = time.time()
+                rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+                img_h, img_w = frame.shape[:2]
+                results = face_mesh.process(rgb_frame)
+                if not results.multi_face_landmarks:
+                    continue
+                else:
+                    
+                    mesh_points = np.array([np.multiply([p.x, p.y], [img_w, img_h]).astype(int) for p in results.multi_face_landmarks[0].landmark])
 
 
-                        cropped_img = rgb_frame[mesh_points[self.pos[0]][1]:mesh_points[self.pos[1]][1],mesh_points[self.pos[0]][0]:mesh_points[self.pos[1]][0]].copy()
+                    cropped_img = rgb_frame[mesh_points[self.pos[0]][1]:mesh_points[self.pos[1]][1],mesh_points[self.pos[0]][0]:mesh_points[self.pos[1]][0]].copy()
+
+                    try:
                         cropped_img = cv.resize(cropped_img,(self.sz[0],self.sz[1]))
+                    except Exception as e:
+                        continue
 
 
-                        img_array = np.expand_dims(cropped_img, axis=0)
-                        img = img_array.astype(np.float32) / 255.0
-                        prediction = self.model.predict(img,verbose=0)
-                        prediction = prediction[0][0]
+                    img_array = np.expand_dims(cropped_img, axis=0)
+                    img = img_array.astype(np.float32) / 255.0
+                    prediction = self.model.predict(img,verbose=0)
+                    prediction = prediction[0][0]
 
 
-                        if prediction>0.55:
-                            if success_cnt==3:
-                                self.queue.put(1)
-                                cv.putText(frame, "DETECTED", (100,100), cv.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 3, cv.LINE_AA)
-                                print("gotcha")
-                                print(prediction)
-                                success_cnt = 0
-                            else:
-                                success_cnt+=1
+                    if prediction>0.55:
+                        if success_cnt==5:
+                            self.queue.put(1)
+                            cv.putText(frame, "DETECTED", (100,100), cv.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 3, cv.LINE_AA)
+                            print("gotcha")
+                            print(prediction)
+                            success_cnt = 0
+                        else:
+                            success_cnt+=1
 
 
                 key = cv.waitKey(1)

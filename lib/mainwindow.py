@@ -11,6 +11,11 @@ from PIL import ImageTk
 import multiprocessing
 
 
+
+
+                
+
+
 modelName = "init"
 
 
@@ -29,6 +34,7 @@ class MainWindow(object):
         self.vkblogo = ImageTk.PhotoImage(file="./assets/auto_selector.ico")
         self.root.iconphoto(True, self.vkblogo)
         self.continue_subtle = 0
+        self.sleep = 0.75
         
         x, y = pyautogui.position()
         self.root.geometry('+{}+{}'.format(x+10,y-100))
@@ -57,35 +63,49 @@ class MainWindow(object):
     def __delete__(self):
         self.stop()
         self.process = None
+
        
     
 
 
         
     def btn_callback(self, key_text):
+
+        # self.subtle.withdraw()
+        # x0, y0 = self.subtle.winfo_x(), self.subtle.winfo_y()
+        # x1 = x0 + 150
+        # y1 = y0 + 280
+
+        # while True:
+        #     x, y = pyautogui.position()
+        #     if x<x0 or x>x1 or y<y0 or y>y1:            
+        #         break
+
+        # time.sleep(0.5)
         keys = key_text.split(',')
 
         if len(keys)==1:
-            time.sleep(0.5)
+            time.sleep(0.75)
             pyautogui.click(button='right')
         elif len(keys)==2:
-            time.sleep(0.5)
+            time.sleep(0.75)
             pyautogui.click(button='left')
             pyautogui.hotkey(keys[0],keys[1], interval=0.05)
         elif len(keys)==3:
-            time.sleep(0.5)
+            time.sleep(0.75)
             pyautogui.click(button='left')
             pyautogui.hotkey(keys[0],keys[1],keys[2], interval=0.05)
         elif len(keys)==4:
-            time.sleep(0.5)
+            time.sleep(0.75)
             pyautogui.click(button='left')
             pyautogui.hotkey(keys[0],keys[1],keys[2],keys[3], interval=0.05)
         elif len(keys)==5:
-            time.sleep(0.5)
+            time.sleep(0.75)
             pyautogui.click(button='left')
             pyautogui.hotkey(keys[0],keys[1],keys[2],keys[3],keys[4], interval=0.05)
-        if self.continue_subtle==0:
-            self.subtle.attributes("-topmost", False)
+        # if self.continue_subtle==0:
+        #     self.subtle.attributes("-topmost", False)
+        # self.subtle.deiconify()
             
             
         
@@ -150,6 +170,13 @@ class MainWindow(object):
             self.root.grid_rowconfigure((0,1,2,3,4), weight=1)
 
 
+
+
+    def auto_click(self, event):
+        print("i click it")
+        pyautogui.click(button='left')
+
+
         
         
         
@@ -191,6 +218,7 @@ class MainWindow(object):
 
             self.buttons.append(Button(self.subtle, text=str(record[0]),
                                       command=lambda record=record:self.btn_callback(record[1])))
+            # self.buttons[idx].bind('<Enter>', self.auto_click)
             self.buttons[idx].grid(row=idx, column=0)
 
         conn.commit()
@@ -199,15 +227,15 @@ class MainWindow(object):
         # Create backto Button
         if self.continue_subtle == 0:
 
-            self.hide_btn = Button(self.subtle, fg="#1152f7", text="隱藏面板", command=self.subtle_hide)
-            self.hide_btn.grid(row=cnt, column=0, pady=2, ipadx=10)
+            # self.hide_btn = Button(self.subtle, fg="#1152f7", text="隱藏面板", command=self.subtle_hide)
+            # self.hide_btn.grid(row=cnt, column=0, pady=2, ipadx=10)
 
             self.delete_btn = Button(self.subtle, fg="#1152f7", text="停止偵測", command=self.subtle_backto)
-            self.delete_btn.grid(row=cnt+1, column=0, pady=2, ipadx=10)
+            self.delete_btn.grid(row=cnt, column=0, pady=2, ipadx=10)
 
 
             self.subtle.grid_columnconfigure((0), weight=1)
-            for i in range(0,cnt+2):
+            for i in range(0,cnt+1):
                 self.subtle.grid_rowconfigure(i, weight=1)
         else:
             self.subtle.grid_columnconfigure((0), weight=1)
