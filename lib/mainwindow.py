@@ -71,17 +71,6 @@ class MainWindow(object):
         
     def btn_callback(self, key_text):
 
-        # self.subtle.withdraw()
-        # x0, y0 = self.subtle.winfo_x(), self.subtle.winfo_y()
-        # x1 = x0 + 150
-        # y1 = y0 + 280
-
-        # while True:
-        #     x, y = pyautogui.position()
-        #     if x<x0 or x>x1 or y<y0 or y>y1:            
-        #         break
-
-        # time.sleep(0.5)
         keys = key_text.split(',')
 
         if len(keys)==1:
@@ -103,9 +92,7 @@ class MainWindow(object):
             time.sleep(0.75)
             pyautogui.click(button='left')
             pyautogui.hotkey(keys[0],keys[1],keys[2],keys[3],keys[4], interval=0.05)
-        # if self.continue_subtle==0:
-        #     self.subtle.attributes("-topmost", False)
-        # self.subtle.deiconify()
+
             
             
         
@@ -173,8 +160,18 @@ class MainWindow(object):
 
 
     def auto_click(self, event):
-        print("i click it")
-        pyautogui.click(button='left')
+        print(self.clicked)
+        if self.clicked == 0:
+            print("i click it")
+            pyautogui.click(button='left')
+            self.clicked = 1
+
+
+
+
+    def auto_no_click(self, event):
+        print("no click")
+        self.clicked = 0
 
 
         
@@ -191,6 +188,7 @@ class MainWindow(object):
     def show_subtle_panel(self):
         
         self.root.withdraw()
+        self.clicked = 0
         
         if hasattr(self,'subtle')==False:
             self.subtle = Toplevel(self.root)  
@@ -203,6 +201,8 @@ class MainWindow(object):
         self.subtle.geometry('+{}+{}'.format(x+10,y-100))
         self.subtle.attributes('-alpha',0.8)
         self.subtle.deiconify()
+
+        # self.subtle.bind('<Leave>', self.auto_no_click)
         
         
         conn = sqlite3.connect('./models/key_book.db')
@@ -227,15 +227,15 @@ class MainWindow(object):
         # Create backto Button
         if self.continue_subtle == 0:
 
-            # self.hide_btn = Button(self.subtle, fg="#1152f7", text="隱藏面板", command=self.subtle_hide)
-            # self.hide_btn.grid(row=cnt, column=0, pady=2, ipadx=10)
+            self.hide_btn = Button(self.subtle, fg="#1152f7", text="隱藏面板", command=self.subtle_hide)
+            self.hide_btn.grid(row=cnt, column=0, pady=2, ipadx=10)
 
             self.delete_btn = Button(self.subtle, fg="#1152f7", text="停止偵測", command=self.subtle_backto)
-            self.delete_btn.grid(row=cnt, column=0, pady=2, ipadx=10)
+            self.delete_btn.grid(row=cnt+1, column=0, pady=2, ipadx=10)
 
 
             self.subtle.grid_columnconfigure((0), weight=1)
-            for i in range(0,cnt+1):
+            for i in range(0,cnt+2):
                 self.subtle.grid_rowconfigure(i, weight=1)
         else:
             self.subtle.grid_columnconfigure((0), weight=1)
@@ -267,6 +267,8 @@ class MainWindow(object):
         c.execute("DROP TABLE IF EXISTS facials;")
         conn.commit()
         c.execute("DROP TABLE IF EXISTS domains;")
+        conn.commit()
+        c.execute("DROP TABLE IF EXISTS positions;")
         conn.commit()
         conn.close()
 

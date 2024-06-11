@@ -60,18 +60,32 @@ class Worker(object):
         c = conn.cursor()
         c.execute("SELECT facePart FROM facials")
         record = c.fetchall()
+        conn.commit()
         self.facePart = record[0][0]
 
+        c.execute("SELECT pos FROM positions")
+        record = c.fetchall()
+        conn.commit()
+        self.settled = record[0][0]
+        conn.close()
+
+
         self.pos = []
+        self.pos2 = []
         self.sz = []
+
+
         if self.facePart=="brow":
             self.pos = [54, 345]
+            self.pos2 = [284, 116]
             self.sz = [96,48]
         elif self.facePart=="nose":
             self.pos = [119,426]
+            self.pos2 = [348, 206]
             self.sz = [60,26]
         else:
             self.pos = [207,430]
+            self.pos2 = [427, 210]
             self.sz = [78,28]
         
         
@@ -105,7 +119,10 @@ class Worker(object):
                     mesh_points = np.array([np.multiply([p.x, p.y], [img_w, img_h]).astype(int) for p in results.multi_face_landmarks[0].landmark])
 
 
-                    cropped_img = rgb_frame[mesh_points[self.pos[0]][1]:mesh_points[self.pos[1]][1],mesh_points[self.pos[0]][0]:mesh_points[self.pos[1]][0]].copy()
+                    if self.settled == 1:
+                        cropped_img = frame[mesh_points[self.pos[0]][1]:mesh_points[self.pos[1]][1],mesh_points[self.pos[0]][0]:mesh_points[self.pos[1]][0]].copy()
+                    elif self.settled == 2:
+                        cropped_img = frame[mesh_points[self.pos2[0]][1]:mesh_points[self.pos2[1]][1],mesh_points[self.pos2[1]][0]:mesh_points[self.pos2[0]][0]].copy()
 
                     try:
                         cropped_img = cv.resize(cropped_img,(self.sz[0],self.sz[1]))

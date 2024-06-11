@@ -110,16 +110,50 @@ class TrainWorker(object):
         record = c.fetchall()
         self.facePart = record[0][0]
 
+
+        listOfTables = c.execute(
+            """SELECT * FROM sqlite_master WHERE type='table' 
+            AND name='positions'; """).fetchall()
+ 
+        if listOfTables == []:
+
+            c.execute("""CREATE TABLE IF NOT EXISTS positions (
+            pos INT
+            )""")
+            conn.commit()
+
+            c.execute("INSERT INTO positions VALUES (:pos)",
+                {
+                    'pos': 0
+                })
+            self.settled = 0
+            conn.commit()
+            conn.close()
+
+        else:
+
+            c.execute("SELECT pos FROM positions")
+            record = c.fetchall()
+            self.settled = record[0][0]
+            conn.commit()
+            conn.close()
+
+
         self.pos = []
+        self.pos2 = []
         self.sz = []
+
         if self.facePart=="brow":
             self.pos = [54, 345]
+            self.pos2 = [284, 116]
             self.sz = [96,48]
         elif self.facePart=="nose":
             self.pos = [119,426]
+            self.pos2 = [348, 206]
             self.sz = [60,26]
         else:
             self.pos = [207,430]
+            self.pos2 = [427, 210]
             self.sz = [78,28]
             
         # 100 for category 0 and 100 for category 1
@@ -254,6 +288,7 @@ class TrainWorker(object):
         '''
         cap = cv.VideoCapture(0)
 
+
         with mp_face_mesh.FaceMesh(
                 max_num_faces=1,
                 refine_landmarks=True,
@@ -272,11 +307,30 @@ class TrainWorker(object):
                     continue
                 else:
                     mesh_points = np.array([np.multiply([p.x, p.y], [img_w, img_h]).astype(int) for p in results.multi_face_landmarks[0].landmark])
+
+                    if self.settled == 0:
+                        if (mesh_points[self.pos[1]][0]-mesh_points[self.pos[0]][0])*(mesh_points[self.pos[1]][1]-mesh_points[self.pos[0]][1])<(mesh_points[self.pos2[0]][0]-mesh_points[self.pos2[1]][0])*(mesh_points[self.pos2[1]][1]-mesh_points[self.pos2[0]][1]):
+                            self.settled = 2
+                        else:
+                            self.settled = 1
+                        conn = sqlite3.connect('./models/key_book.db')
+                        c = conn.cursor()
+                        c.execute("UPDATE positions SET pos = ?", (self.settled,))
+                        print(self.settled)
+                        conn.commit()
+                        conn.close()
+                                
                     
-                    cv.rectangle(frame, tuple((mesh_points[self.pos[0]][0]-5,mesh_points[self.pos[0]][1]-5)),tuple((mesh_points[self.pos[1]][0]+5,mesh_points[self.pos[1]][1]+5)),(0,255,0),3)
-                    
-                    cv.circle(frame, tuple((mesh_points[self.pos[0]][0]-5,mesh_points[self.pos[0]][1]-5)), radius=5, color=(0, 0, 255), thickness=-1)
-                    cv.circle(frame, tuple((mesh_points[self.pos[1]][0]+5,mesh_points[self.pos[1]][1]+5)), radius=5, color=(0, 0, 255), thickness=-1)
+                    if self.settled == 1:
+                        cv.rectangle(frame, tuple((mesh_points[self.pos[0]][0]-5,mesh_points[self.pos[0]][1]-5)),tuple((mesh_points[self.pos[1]][0]+5,mesh_points[self.pos[1]][1]+5)),(0,255,0),3)
+                        
+                        cv.circle(frame, tuple((mesh_points[self.pos[0]][0]-5,mesh_points[self.pos[0]][1]-5)), radius=5, color=(0, 0, 255), thickness=-1)
+                        cv.circle(frame, tuple((mesh_points[self.pos[1]][0]+5,mesh_points[self.pos[1]][1]+5)), radius=5, color=(0, 0, 255), thickness=-1)
+                    elif self.settled == 2:
+                        cv.rectangle(frame, tuple((mesh_points[self.pos2[1]][0]-5,mesh_points[self.pos2[0]][1]-5)),tuple((mesh_points[self.pos2[0]][0]+5,mesh_points[self.pos2[1]][1]+5)),(0,255,0),3)
+                        
+                        cv.circle(frame, tuple((mesh_points[self.pos2[0]][0]-5,mesh_points[self.pos2[0]][1]-5)), radius=5, color=(0, 0, 255), thickness=-1)
+                        cv.circle(frame, tuple((mesh_points[self.pos2[1]][0]+5,mesh_points[self.pos2[1]][1]+5)), radius=5, color=(0, 0, 255), thickness=-1)
 
                     font = ImageFont.truetype(fontpath, 35)      
                     imgPil = Image.fromarray(frame)                
@@ -332,15 +386,24 @@ class TrainWorker(object):
                 else:
                     mesh_points = np.array([np.multiply([p.x, p.y], [img_w, img_h]).astype(int) for p in results.multi_face_landmarks[0].landmark])
                     
-                    cv.rectangle(frame, tuple((mesh_points[self.pos[0]][0]-5,mesh_points[self.pos[0]][1]-5)),tuple((mesh_points[self.pos[1]][0]+5,mesh_points[self.pos[1]][1]+5)),(0,255,0),3)
-                    
-                    cv.circle(frame, tuple((mesh_points[self.pos[0]][0]-5,mesh_points[self.pos[0]][1]-5)), radius=5, color=(0, 0, 255), thickness=-1)
-                    cv.circle(frame, tuple((mesh_points[self.pos[1]][0]+5,mesh_points[self.pos[1]][1]+5)), radius=5, color=(0, 0, 255), thickness=-1)
+                    if self.settled == 1:
+                        cv.rectangle(frame, tuple((mesh_points[self.pos[0]][0]-5,mesh_points[self.pos[0]][1]-5)),tuple((mesh_points[self.pos[1]][0]+5,mesh_points[self.pos[1]][1]+5)),(0,255,0),3)
+                        
+                        cv.circle(frame, tuple((mesh_points[self.pos[0]][0]-5,mesh_points[self.pos[0]][1]-5)), radius=5, color=(0, 0, 255), thickness=-1)
+                        cv.circle(frame, tuple((mesh_points[self.pos[1]][0]+5,mesh_points[self.pos[1]][1]+5)), radius=5, color=(0, 0, 255), thickness=-1)
+                    elif self.settled == 2:
+                        cv.rectangle(frame, tuple((mesh_points[self.pos2[1]][0]-5,mesh_points[self.pos2[0]][1]-5)),tuple((mesh_points[self.pos2[0]][0]+5,mesh_points[self.pos2[1]][1]+5)),(0,255,0),3)
+                        
+                        cv.circle(frame, tuple((mesh_points[self.pos2[0]][0]-5,mesh_points[self.pos2[0]][1]-5)), radius=5, color=(0, 0, 255), thickness=-1)
+                        cv.circle(frame, tuple((mesh_points[self.pos2[1]][0]+5,mesh_points[self.pos2[1]][1]+5)), radius=5, color=(0, 0, 255), thickness=-1)
 
                     cv.putText(frame, "Round "+str(round)+" / 30", (100,100), cv.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 2, cv.LINE_AA)
                     
                     
-                    cropped_img = frame[mesh_points[self.pos[0]][1]:mesh_points[self.pos[1]][1],mesh_points[self.pos[0]][0]:mesh_points[self.pos[1]][0]].copy()
+                    if self.settled == 1:
+                        cropped_img = frame[mesh_points[self.pos[0]][1]:mesh_points[self.pos[1]][1],mesh_points[self.pos[0]][0]:mesh_points[self.pos[1]][0]].copy()
+                    elif self.settled == 2:
+                        cropped_img = frame[mesh_points[self.pos2[0]][1]:mesh_points[self.pos2[1]][1],mesh_points[self.pos2[1]][0]:mesh_points[self.pos2[0]][0]].copy()
 
                     try:
                         cropped_img = cv.resize(cropped_img,(self.sz[0],self.sz[1]))
