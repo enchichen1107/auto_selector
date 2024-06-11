@@ -48,6 +48,7 @@ class Worker(object):
 
     def run(self):
 
+        # init opencv settings
         cap = cv.VideoCapture(0)
         cv.namedWindow("subtle facial", cv.WINDOW_NORMAL)
         cv.resizeWindow('subtle facial', self.width, self.height)
@@ -56,6 +57,7 @@ class Worker(object):
         
         self.model = load_model('./models/'+modelName+'.h5')
    
+        # get facial part
         conn = sqlite3.connect('./models/key_book.db')
         c = conn.cursor()
         c.execute("SELECT facePart FROM facials")
@@ -63,6 +65,7 @@ class Worker(object):
         conn.commit()
         self.facePart = record[0][0]
 
+        # get head tilted position
         c.execute("SELECT pos FROM positions")
         record = c.fetchall()
         conn.commit()
@@ -88,27 +91,23 @@ class Worker(object):
             self.pos2 = [427, 210]
             self.sz = [78,28]
         
-        
+        # start real time capture and detect
         with mp_face_mesh.FaceMesh(
                 max_num_faces=1,
                 refine_landmarks=True,
                 min_detection_confidence=0.5) as face_mesh:
 
             prediction = 0
-            # frame_rate = 10
-            # prev_time = 0
             success_cnt = 0
             while True:
                 prediction = 0
-                # time_elapsed = time.time() - prev_time
                 ret, frame = cap.read()
                 frame = cv.flip(frame, 1)
                 if not ret:
                     break
                 if not self.is_alive:
                     break
-                # if time_elapsed > 1./frame_rate:
-                # prev_time = time.time()
+
                 rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
                 img_h, img_w = frame.shape[:2]
                 results = face_mesh.process(rgb_frame)
@@ -118,7 +117,7 @@ class Worker(object):
                     
                     mesh_points = np.array([np.multiply([p.x, p.y], [img_w, img_h]).astype(int) for p in results.multi_face_landmarks[0].landmark])
 
-
+                    # crop img
                     if self.settled == 1:
                         cropped_img = frame[mesh_points[self.pos[0]][1]:mesh_points[self.pos[1]][1],mesh_points[self.pos[0]][0]:mesh_points[self.pos[1]][0]].copy()
                     elif self.settled == 2:
@@ -130,6 +129,7 @@ class Worker(object):
                         continue
 
 
+                    # model predict
                     img_array = np.expand_dims(cropped_img, axis=0)
                     img = img_array.astype(np.float32) / 255.0
                     prediction = self.model.predict(img,verbose=0)
@@ -137,7 +137,7 @@ class Worker(object):
 
 
                     if prediction>0.55:
-                        if success_cnt==5:
+                        if success_cnt==5: # logic for blocking false alarm
                             self.queue.put(1)
                             cv.putText(frame, "DETECTED", (100,100), cv.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 3, cv.LINE_AA)
                             print("gotcha")

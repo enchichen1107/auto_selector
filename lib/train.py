@@ -41,9 +41,13 @@ class TrainWorker(object):
     
     def __init__(self):
         self._is_alive = multiprocessing.Value(ctypes.c_bool, True)
+
+        # init screen size
         s_size = pyautogui.size()
         self.width = s_size[0]
         self.height = s_size[1]
+
+        # init used folders
         self.dirFace_train_0 = "./models/data/train/0/"
         self.dirFace_train_1 = "./models/data/train/1/"
         self.dirFace_test_0 = "./models/data/test/0/"
@@ -72,6 +76,7 @@ class TrainWorker(object):
         self.buffer_len = len([name for name in os.listdir(self.dirFace_buffer0) if os.path.isfile(os.path.join(self.dirFace_buffer0, name))])
         
         
+        # init numbers for retrieving
         self.target_num = 0  
         self.ncm_num = 0
         if self.buffer_len > 0:
@@ -83,16 +88,9 @@ class TrainWorker(object):
                 self.ncm_num = 45
                        
 
+        # init numbers for collecting
         self.CTRL_TOTAL = 90
         self.EXP_TOTAL = 90
-        
-        self.try_lr = 0.003
-        self.EPOCH = 20
-        self.tEPOCH = 35
-        self.ncm_fc1 = 16
-        self.train_batch = 8
-        self.test_batch = 8
-        
         self.prompt = True
         self.response1 = False
         self.response2 = False
@@ -103,7 +101,18 @@ class TrainWorker(object):
         self.mouseX = 0
         self.mouseY = 0
         self.rest = 0
+
         
+        # init numbers for training
+        self.try_lr = 0.003
+        self.EPOCH = 20
+        self.tEPOCH = 35
+        self.ncm_fc1 = 16
+        self.train_batch = 8
+        self.test_batch = 8
+        
+        
+        # init chosen facial part
         conn = sqlite3.connect('./models/key_book.db')
         c = conn.cursor()
         c.execute("SELECT facePart FROM facials")
@@ -111,6 +120,7 @@ class TrainWorker(object):
         self.facePart = record[0][0]
 
 
+        # init tilted positions (for cases who can't sit upright)
         listOfTables = c.execute(
             """SELECT * FROM sqlite_master WHERE type='table' 
             AND name='positions'; """).fetchall()
@@ -139,6 +149,7 @@ class TrainWorker(object):
             conn.close()
 
 
+        # init positions for mediapipe and size for cropped image
         self.pos = []
         self.pos2 = []
         self.sz = []
@@ -161,12 +172,15 @@ class TrainWorker(object):
             
         
     def draw_circle_red(self, event, x, y, flags, param):
+        ''' function for handle opencv mouse event '''
+        # handle prompt
         if self.prompt and event == cv.EVENT_LBUTTONDOWN and not self.response1:
             self.response1 = True
             self.response2 = False
         elif self.prompt and event == cv.EVENT_LBUTTONDOWN and self.response1:
             self.response1 = False
             self.response2 = True
+        # handle drawing collect data phase's circle
         elif event == cv.EVENT_LBUTTONDOWN and not self.pressed1 and x>self.mouseX-30 and x<self.mouseX+30 and y>self.mouseY-30 and y<self.mouseY+30:
             self.pressed1 = True
             self.show_control = True
@@ -188,6 +202,7 @@ class TrainWorker(object):
            
         
     def start(self):
+        ''' entry function for training '''
         self.domain_increment()
         self.collect()
         self.retrieve()
@@ -202,7 +217,7 @@ class TrainWorker(object):
                 
                 
     def domain_increment(self):
-
+        ''' get current domain count and update it '''
         conn = sqlite3.connect('./models/key_book.db')
         c = conn.cursor()
         listOfTables = c.execute(
@@ -217,6 +232,7 @@ class TrainWorker(object):
             )""")
             conn.commit()
 
+            # init domain count
             c.execute("INSERT INTO domains VALUES (:id, :counts)",
                 {
                     'id': 1,
@@ -227,11 +243,13 @@ class TrainWorker(object):
 
         else:
 
+            # get current domain count
             c.execute("SELECT counts FROM domains WHERE id = 1")
             record = c.fetchone()
             new_counts = record[0]+1
             conn.commit()
             
+            # update domain count
             c.execute("UPDATE domains SET counts = ? WHERE id = ?", (new_counts,1))
             print(new_counts)
             conn.commit()
@@ -240,8 +258,9 @@ class TrainWorker(object):
 
     def collect(self):
         
-        ## COLLECT //////////////////////////////////////////////////////////////////////////////////////////
-        
+        ''' function for collecting data '''
+
+        # remove old domain data      
         for folder in self.new_data:
             if os.path.exists(folder):
                 shutil.rmtree(folder)
@@ -253,6 +272,7 @@ class TrainWorker(object):
         cv.moveWindow('subtle facial',0,0)
         cv.setMouseCallback('subtle facial', self.draw_circle_red)
         
+        # get current domain count
         conn = sqlite3.connect('./models/key_book.db')
         c = conn.cursor()
         c.execute("SELECT counts FROM domains WHERE id = 1")
@@ -298,7 +318,7 @@ class TrainWorker(object):
                 if not ret:
                     break
 
-                # detectfaces
+                # detect faces
                 frame = cv.flip(frame, 1)
                 rgb_frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
                 img_h, img_w = frame.shape[:2]
@@ -308,10 +328,13 @@ class TrainWorker(object):
                 else:
                     mesh_points = np.array([np.multiply([p.x, p.y], [img_w, img_h]).astype(int) for p in results.multi_face_landmarks[0].landmark])
 
+                    # logic for tilted head positions
                     if self.settled == 0:
                         if (mesh_points[self.pos[1]][0]-mesh_points[self.pos[0]][0])*(mesh_points[self.pos[1]][1]-mesh_points[self.pos[0]][1])<(mesh_points[self.pos2[0]][0]-mesh_points[self.pos2[1]][0])*(mesh_points[self.pos2[1]][1]-mesh_points[self.pos2[0]][1]):
+                            # tilt left
                             self.settled = 2
                         else:
+                            # tilt right
                             self.settled = 1
                         conn = sqlite3.connect('./models/key_book.db')
                         c = conn.cursor()
@@ -321,6 +344,7 @@ class TrainWorker(object):
                         conn.close()
                                 
                     
+                    # draw rectangles and circles
                     if self.settled == 1:
                         cv.rectangle(frame, tuple((mesh_points[self.pos[0]][0]-5,mesh_points[self.pos[0]][1]-5)),tuple((mesh_points[self.pos[1]][0]+5,mesh_points[self.pos[1]][1]+5)),(0,255,0),3)
                         
@@ -386,6 +410,7 @@ class TrainWorker(object):
                 else:
                     mesh_points = np.array([np.multiply([p.x, p.y], [img_w, img_h]).astype(int) for p in results.multi_face_landmarks[0].landmark])
                     
+                    # draw rectangle and circles
                     if self.settled == 1:
                         cv.rectangle(frame, tuple((mesh_points[self.pos[0]][0]-5,mesh_points[self.pos[0]][1]-5)),tuple((mesh_points[self.pos[1]][0]+5,mesh_points[self.pos[1]][1]+5)),(0,255,0),3)
                         
@@ -400,6 +425,7 @@ class TrainWorker(object):
                     cv.putText(frame, "Round "+str(round)+" / 30", (100,100), cv.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 2, cv.LINE_AA)
                     
                     
+                    # crop image
                     if self.settled == 1:
                         cropped_img = frame[mesh_points[self.pos[0]][1]:mesh_points[self.pos[1]][1],mesh_points[self.pos[0]][0]:mesh_points[self.pos[1]][0]].copy()
                     elif self.settled == 2:
@@ -411,6 +437,7 @@ class TrainWorker(object):
                         continue
                     
 
+                    # logic for alternatively showing instructions and random circles
                     self.mouseX = mid_pt[pt_pos][0]
                     self.mouseY = mid_pt[pt_pos][1]
                     if self.pressed1:
@@ -445,6 +472,8 @@ class TrainWorker(object):
                     if self.rest==1:
                         round+=1
 
+                    
+                    # collect subtle facial expression img
                     if self.rest==1 or self.rest==5 or self.rest==9:
                         exp_cnt+=1               
                         # saving faces according to detected coordinates 
@@ -464,6 +493,9 @@ class TrainWorker(object):
                         draw.text((mid_pt[pt_pos][0]+40,mid_pt[pt_pos][1]-30), "正在收微表情", fill=(0, 0, 255), font=font)
                         frame = np.array(imgPil)
 
+
+
+                    # collect control img
                     if control==1 or control==5 or control==9:
                         ctrl_cnt+=1
                         FaceFileName = ""
@@ -531,18 +563,20 @@ class TrainWorker(object):
                 
 
     def retrieve(self):
+        ''' function for retrieving data '''
         
         shutil.copytree(self.dirFace_train_0, self.dirFace_retrieve_train_0)
         shutil.copytree(self.dirFace_train_1, self.dirFace_retrieve_train_1)
         shutil.copytree(self.dirFace_test_0, self.dirFace_retrieve_test_0) 
         shutil.copytree(self.dirFace_test_1, self.dirFace_retrieve_test_1)
                 
-        ## DATA RETRIEVE //////////////////////////////////////////////////////////////////////////////////////////
         ncm_fc1 = 16
         
         if self.buffer_len!=0:
             picked = []
             # mir //////////////////////////////////////////////////
+
+            # calculate pre loss
             model = load_model('./models/'+modelName+'.h5')
             pre_loss_0 = []
             name_arr_0 = []
@@ -585,6 +619,7 @@ class TrainWorker(object):
 
 
 
+            # calculate post loss after update model with new domain data
             post_loss_0 = []
             post_loss_1 = []
             folder_dir = self.buffer_srcs[0]
@@ -604,7 +639,7 @@ class TrainWorker(object):
                     single_loss_value, _ = new_model.evaluate(img, np.array([0]))
                     post_loss_1.append(single_loss_value)
 
-
+            # retrieve data with most interfered
             pd.options.display.float_format = '{:.30f}'.format
             scores1 = np.array(post_loss_1)-np.array(pre_loss_1)
             scores1 = np.array(scores1)
@@ -615,7 +650,7 @@ class TrainWorker(object):
             df['name_arr_1']=pd.Series(name_arr_1)
             df = df.sort_values(by="scores1",ascending=False)
             df1 = df[:self.target_num]
-            print(df1[:])
+            # print(df1[:])
 
             pd.options.display.float_format = '{:.30f}'.format
             scores0 = np.array(post_loss_0)-np.array(pre_loss_0)
@@ -627,7 +662,7 @@ class TrainWorker(object):
             df['name_arr_0']=pd.Series(name_arr_0)
             df = df.sort_values(by="scores0",ascending=False)
             df2 = df[:self.target_num]
-            print(df2[:])
+            # print(df2[:])
 
 
             # 1:4 test, train
@@ -653,6 +688,8 @@ class TrainWorker(object):
             
             model = load_model('./models/'+modelName+'.h5')
             feature_network = Model(model.input, model.get_layer('fc1').output)
+
+            # prepare feature from layer fc1
             all_feat_0 = np.empty([1,ncm_fc1])
             name_arr_0 = []
             all_feat_1 = np.empty([1,ncm_fc1])
@@ -681,9 +718,12 @@ class TrainWorker(object):
             name_arr_1 = np.reshape(name_arr_1,(-1,1))
             all_feat_0 = np.delete(all_feat_0, (0), axis=0)
             all_feat_1 = np.delete(all_feat_1, (0), axis=0)
+
+            # calculate mean for features
             ctrl_mean_0 = np.mean(all_feat_0, axis=0)
             ctrl_mean_1 = np.mean(all_feat_1, axis=0)
 
+            # retrieve data with nearest feature distance with mean
             all_dist_0 = []
             for row in all_feat_0:
                 dist = np.linalg.norm(row - ctrl_mean_0)
@@ -734,7 +774,8 @@ class TrainWorker(object):
         
     def model_training(self):
         
-        ## MODEL TRAINING //////////////////////////////////////////////////////////////////////////////////////////
+        ''' function for training model '''
+        
         filepath = './models/'+modelName+'.h5'
         
         if not os.path.isfile(filepath):
@@ -817,7 +858,8 @@ class TrainWorker(object):
            
     def update_buffer(self):
                 
-        ## UPDATE BUFFER //////////////////////////////////////////////////////////////////////////////////////////
+        ''' function for updating buffer '''
+        
         conn = sqlite3.connect('./models/key_book.db')
         c = conn.cursor()
         c.execute("SELECT counts FROM domains WHERE id = 1")
@@ -837,6 +879,7 @@ class TrainWorker(object):
         elif self.buffer_len<self.buffer_limit:
             picked_file = []
             target_num = self.buffer_limit-self.buffer_len
+            # first random choose from src to add up to buffer limit
             for i in range(len(self.buffer_srcs)):
                 src = self.new_train_srcs[i]
                 dest = self.buffer_srcs[i]
@@ -848,6 +891,7 @@ class TrainWorker(object):
                     picked_file.append(f)
                     cnt+=1
                     shutil.copy(os.path.join(src, f), dest)
+            # for the remaining random exchange buffer data with new domain data
             target_num2 = random_picked_cnt-target_num
             for i in range(len(self.buffer_srcs)):
                 src = self.new_train_srcs[i]
@@ -864,6 +908,7 @@ class TrainWorker(object):
                     shutil.copy(os.path.join(src, f), dest)
                     
         else:
+            # random exchange buffer data with new domain data
             target_num = random_picked_cnt
             for i in range(len(self.buffer_srcs)):
                 src = self.new_train_srcs[i]
